@@ -100,7 +100,7 @@ export default function AI_Input_Search({
                         <div className="absolute left-3 bottom-3 flex items-center gap-2">
                             {/* File attachment */}
                             <label className="cursor-pointer rounded-lg p-2 transition-colors hover:bg-black/10 dark:hover:bg-white/10">
-                                <input type="file" className="hidden" />
+                                <input type="file" className="hidden" disabled/>
                                 <Paperclip
                                     className={cn(
                                         "w-4 h-4 transition-colors",
@@ -181,8 +181,8 @@ export default function AI_Input_Search({
                                             ? "bg-gray-600 text-gray-400 cursor-not-allowed"
                                             : "bg-gray-300 text-gray-500 cursor-not-allowed"
                                         : theme === "dark"
-                                            ? "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
-                                            : "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                                            ? "bg-gray-700 hover:bg-gray-800 text-white cursor-pointer"
+                                            : "bg-gray-700 hover:bg-gray-800 text-white cursor-pointer"
                                 )}>
                                 {loading ? (
                                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />

@@ -1,23 +1,36 @@
 "use client";
 import { motion } from "framer-motion";
 
-export default function ChatBubble({ sender, text }) {
-  const isUser = sender === "user";
+export default function ChatBubble({ sender, text, sources = [] }) {
+  const isAI = sender === "ai";
+  console.log("🧩 Source metadata:", sources);
+
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-    >
+    <div className={`flex ${isAI ? "justify-start" : "justify-end"}`}>
       <div
-        className={`max-w-[80%] p-3 rounded-2xl text-sm ${
-          isUser
-            ? "bg-purple-600 text-white rounded-br-none"
-            : "bg-gray-800 text-gray-100 rounded-bl-none"
+        className={`p-3 rounded-2xl max-w-[80%] ${
+          isAI ? "bg-gray-800 text-white" : "bg-gray-600 text-white"
         }`}
       >
-        {text}
+        <p>{text}</p>
+
+        {/* 🧠 Show sources if it's an AI message and has metadata */}
+        {isAI && sources.length > 0 && (
+          <div className="mt-3 border-t border-gray-600/40 pt-2 text-sm text-gray-400">
+            <p className="font-medium mb-1">📄 Sources:</p>
+            <ul className="space-y-1">
+              {sources.map((src, i) => (
+                <li key={i}>
+                  {src.metadata?.source || "Unknown file"}
+                    {src.metadata?.pageNumber && <span> — page {src.metadata.pageNumber}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
-    </motion.div>
+    </div>
   );
 }
+

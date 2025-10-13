@@ -13,12 +13,13 @@ export default function Home() {
   const [theme, setTheme] = useState("dark");
 
   const handleAsk = async () => {
-    if (!question.trim()) return;
-    const newMsg = { sender: "user", text: question };
-    setMessages([...messages, newMsg]);
-    setQuestion("");
-    setLoading(true);
+  if (!question.trim()) return;
+  const newMsg = { sender: "user", text: question };
+  setMessages([...messages, newMsg]);
+  setQuestion("");
+  setLoading(true);
 
+  try {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -26,9 +27,19 @@ export default function Home() {
     });
 
     const data = await res.json();
-    setMessages((prev) => [...prev, { sender: "ai", text: data.answer }]);
+
+    // 🧩 Include sources along with the AI answer
+    setMessages((prev) => [
+      ...prev,
+      { sender: "ai", text: data.answer, sources: data.sources || [] },
+    ]);
+  } catch (err) {
+    console.error("Chat error:", err);
+  } finally {
     setLoading(false);
-  };
+  }
+};
+
 
   return (
     <div className={`${theme === "dark" ? "bg-[#0f0f0f] text-white" : "bg-white text-black"} min-h-screen flex flex-col transition-all duration-300`}>
@@ -39,9 +50,13 @@ export default function Home() {
 
 
       <main className="flex-1 overflow-y-auto px-4 py-6 space-y-4 max-w-2xl mx-auto w-full">
-        <FileUploader />
+       
+        <FileUploader 
+          onFileProcessed={(file) => console.log("File processed:", file)}
+          theme={theme}
+        />
         {messages.map((msg, i) => (
-          <ChatBubble key={i} sender={msg.sender} text={msg.text} />
+          <ChatBubble key={i} sender={msg.sender} text={msg.text} sources={msg.sources} />
         ))}
         {loading && <p className="text-gray-400 animate-pulse">Thinking...</p>}
       </main>
