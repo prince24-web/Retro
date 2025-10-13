@@ -1,15 +1,5 @@
 "use client";
 
-/**
- * @author: @kokonutui
- * @description: AI Input Search
- * @version: 1.0.0
- * @date: 2025-06-26
- * @license: MIT
- * @website: https://kokonutui.com
- * @github: https://github.com/kokonut-labs/kokonutui
- */
-
 import { Globe, Paperclip, Send } from "lucide-react";
 import { useState } from "react";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,8 +7,13 @@ import { motion, AnimatePresence } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useAutoResizeTextarea } from "@/hooks/use-auto-resize-textarea";
 
-export default function AI_Input_Search() {
-    const [value, setValue] = useState("");
+export default function AI_Input_Search({ 
+  question, 
+  setQuestion, 
+  loading, 
+  handleAsk,
+  theme = "dark" 
+}) {
     const { textareaRef, adjustHeight } = useAutoResizeTextarea({
         minHeight: 52,
         maxHeight: 200,
@@ -27,7 +22,8 @@ export default function AI_Input_Search() {
     const [isFocused, setIsFocused] = useState(false);
 
     const handleSubmit = () => {
-        setValue("");
+        if (!question.trim() || loading) return;
+        handleAsk();
         adjustHeight(true); 
     };
 
@@ -45,17 +41,31 @@ export default function AI_Input_Search() {
         }
     };
 
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit();
+        }
+    };
+
+    const handleChange = (e) => {
+        setQuestion(e.target.value);
+        adjustHeight();
+    };
+
     return (
         <div className="w-full py-4">
             <div className="relative max-w-xl w-full mx-auto">
                 <div
                     role="textbox"
                     tabIndex={0}
-                    aria-label="Search input container"
+                    aria-label="Ask a question"
                     className={cn(
                         "relative flex flex-col rounded-xl transition-all duration-200 w-full text-left cursor-text",
-                        "ring-1 ring-black/10 dark:ring-white/10",
-                        isFocused && "ring-black/20 dark:ring-white/20"
+                        theme === "dark" 
+                            ? "ring-1 ring-white/10 bg-gray-800"
+                            : "ring-1 ring-black/10 bg-gray-100",
+                        isFocused && (theme === "dark" ? "ring-white/20" : "ring-black/20")
                     )}
                     onClick={handleContainerClick}
                     onKeyDown={(e) => {
@@ -66,31 +76,41 @@ export default function AI_Input_Search() {
                     <div className="overflow-y-auto max-h-[200px]">
                         <Textarea
                             id="ai-input-04"
-                            value={value}
-                            placeholder="Search the web..."
-                            className="w-full rounded-xl rounded-b-none px-4 py-3 bg-black/5 dark:bg-white/5 border-none dark:text-white placeholder:text-black/70 dark:placeholder:text-white/70 resize-none focus-visible:ring-0 leading-[1.2]"
+                            value={question}
+                            placeholder="Ask a question..."
+                            className={cn(
+                                "w-full rounded-xl rounded-b-none px-4 py-3 border-none resize-none focus-visible:ring-0 leading-[1.2]",
+                                theme === "dark"
+                                    ? "bg-gray-800 text-white placeholder:text-white/70"
+                                    : "bg-gray-100 text-black placeholder:text-black/70"
+                            )}
                             ref={textareaRef}
                             onFocus={handleFocus}
                             onBlur={handleBlur}
-                            onKeyDown={(e) => {
-                                if (e.key === "Enter" && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSubmit();
-                                }
-                            }}
-                            onChange={(e) => {
-                                setValue(e.target.value);
-                                adjustHeight();
-                            }} />
+                            onKeyDown={handleKeyDown}
+                            onChange={handleChange}
+                            disabled={loading}
+                        />
                     </div>
 
-                    <div className="h-12 bg-black/5 dark:bg-white/5 rounded-b-xl">
+                    <div className={cn(
+                        "h-12 rounded-b-xl",
+                        theme === "dark" ? "bg-gray-700" : "bg-gray-200"
+                    )}>
                         <div className="absolute left-3 bottom-3 flex items-center gap-2">
-                            <label className="cursor-pointer rounded-lg p-2 bg-black/5 dark:bg-white/5">
+                            {/* File attachment */}
+                            <label className="cursor-pointer rounded-lg p-2 transition-colors hover:bg-black/10 dark:hover:bg-white/10">
                                 <input type="file" className="hidden" />
                                 <Paperclip
-                                    className="w-4 h-4 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white transition-colors" />
+                                    className={cn(
+                                        "w-4 h-4 transition-colors",
+                                        theme === "dark" 
+                                            ? "text-white/40 hover:text-white" 
+                                            : "text-black/40 hover:text-black"
+                                    )} />
                             </label>
+                            
+                            {/* Search toggle button - kept as requested */}
                             <button
                                 type="button"
                                 onClick={() => {
@@ -100,7 +120,9 @@ export default function AI_Input_Search() {
                                     "rounded-full transition-all flex items-center gap-2 px-1.5 py-1 border h-8 cursor-pointer",
                                     showSearch
                                         ? "bg-sky-500/15 border-sky-400 text-sky-500"
-                                        : "bg-black/5 dark:bg-white/5 border-transparent text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white "
+                                        : theme === "dark"
+                                            ? "bg-white/5 border-transparent text-white/40 hover:text-white"
+                                            : "bg-black/5 border-transparent text-black/40 hover:text-black"
                                 )}>
                                 <div className="w-4 h-4 flex items-center justify-center shrink-0">
                                     <motion.div
@@ -145,14 +167,28 @@ export default function AI_Input_Search() {
                                 </AnimatePresence>
                             </button>
                         </div>
+                        
+                        {/* Send button */}
                         <div className="absolute right-3 bottom-3">
                             <button
                                 type="button"
                                 onClick={handleSubmit}
-                                className={cn("rounded-lg p-2 transition-colors", value
-                                    ? "bg-sky-500/15 text-sky-500"
-                                    : "bg-black/5 dark:bg-white/5 text-black/40 dark:text-white/40 hover:text-black dark:hover:text-white cursor-pointer")}>
-                                <Send className="w-4 h-4" />
+                                disabled={loading || !question.trim()}
+                                className={cn(
+                                    "rounded-lg p-2 transition-all duration-200",
+                                    loading || !question.trim()
+                                        ? theme === "dark"
+                                            ? "bg-gray-600 text-gray-400 cursor-not-allowed"
+                                            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                                        : theme === "dark"
+                                            ? "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                                            : "bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                                )}>
+                                {loading ? (
+                                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                    <Send className="w-4 h-4" />
+                                )}
                             </button>
                         </div>
                     </div>

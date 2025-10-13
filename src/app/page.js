@@ -32,10 +32,11 @@ export default function Home() {
 
   return (
     <div className={`${theme === "dark" ? "bg-[#0f0f0f] text-white" : "bg-white text-black"} min-h-screen flex flex-col transition-all duration-300`}>
-      <header className="p-4 flex items-center justify-between border-b border-gray-700/40">
-        <h1 className="text-xl font-semibold">Retro</h1>
+     <header className="p-4 flex items-center justify-between border-b border-gray-700/40">
+        <h1 className="text-xl font-semibold pr-3">Retro</h1>
         <ThemeToggle theme={theme} setTheme={setTheme} />
       </header>
+
 
       <main className="flex-1 overflow-y-auto px-4 py-6 space-y-4 max-w-2xl mx-auto w-full">
         <FileUploader />
@@ -45,21 +46,15 @@ export default function Home() {
         {loading && <p className="text-gray-400 animate-pulse">Thinking...</p>}
       </main>
 
-      <footer className="p-4 border-t border-gray-700/40 flex items-center gap-2 max-w-2xl mx-auto w-full">
-        <input
-          value={question}
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleAsk()}
-          placeholder="Ask a question..."
-          className={`flex-1 p-3 rounded-xl outline-none border ${theme === "dark" ? "bg-gray-800 border-gray-700 text-white" : "bg-gray-100 border-gray-300 text-black"}`}
+      <footer className="p-4 flex items-center gap-2 max-w-2xl mx-auto w-full">
+    
+        <AI_Input_Search
+          question={question}
+          setQuestion={setQuestion}
+          loading={loading}
+          handleAsk={handleAsk}
+          theme={theme} // "dark" or "light"
         />
-        <button
-          onClick={handleAsk}
-          disabled={loading}
-          className="bg-purple-600 hover:bg-purple-700 text-white px-5 py-2 rounded-xl transition disabled:opacity-50"
-        >
-          {loading ? "..." : "Send"}
-        </button>
       </footer>
     </div>
   );
