@@ -75,7 +75,7 @@ export default function Home() {
 
           <p className="text-lg text-gray-600 max-w-xl mb-10">
             Upload your PDF files and start having an intelligent chat with them.
-            Get instant summaries, answers, and insights powered by AI.
+            Get instant answers, and insights powered by AI.
           </p>
         </div>
         
