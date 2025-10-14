@@ -30,7 +30,7 @@ export const metadata = {
     title: "Retro – Chat with Your Documents",
     description:
       "Upload your PDFs and chat with them instantly. Summarize, ask questions, and get insights — all in one place.",
-    url: "https://retro-ai.vercel.app", // <-- change to your real domain
+    url: "https://retro-psi-one.vercel.app", // <-- change to your real domain
     siteName: "Retro",
     images: [
       {
