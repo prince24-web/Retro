@@ -1,39 +1,87 @@
-// app/api/store-vectors/route.js
-import { createClient } from '@supabase/supabase-js';
-import { NextResponse } from 'next/server';
+// src/app/api/embed/route.js
+import { NextResponse } from "next/server";
+import { HuggingFaceInferenceEmbeddings } from "@langchain/community/embeddings/hf";
+import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
+import { SupabaseVectorStore } from "@langchain/community/vectorstores/supabase";
+import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
+const supabaseClient = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 export async function POST(req) {
-  try {
-    const body = await req.json();
-    const { ids, documents, embeddings, metadatas } = body;
+  console.log("🚀 /api/embed called");
 
-    if (!ids || !documents || !embeddings) {
-      return NextResponse.json({ error: 'missing payload arrays' }, { status: 400 });
+  try {
+    // Step 1: Parse input
+    const { docs } = await req.json();
+    console.log("📥 Received docs:", Array.isArray(docs) ? docs.length : 0);
+
+    if (!docs?.length) {
+      console.warn("⚠️ No documents provided!");
+      return NextResponse.json({ error: "No documents provided" }, { status: 400 });
     }
 
-    // build rows to insert/upsert
-    const rows = ids.map((id, i) => ({
-      id,
-      document: documents[i] ?? null,
-      embedding: embeddings[i],      // array -> will be cast into vector
-      metadata: metadatas?.[i] ?? null
-    }));
+    // Step 2: Combine text
+    const fullText = docs.map((d) => d.pageContent).join("\n");
+    console.log("📄 Total text length:", fullText.length);
 
-    // upsert (insert or update)
-    const { data, error } = await supabase
-      .from('pdf_embeddings')
-      .upsert(rows, { onConflict: ['id'] });
+    // Step 3: Split text
+    const splitter = new RecursiveCharacterTextSplitter({
+      chunkSize: 1000,
+      chunkOverlap: 200,
+    });
 
-    if (error) throw error;
+    const splitDocs = await splitter.createDocuments(
+      docs.map((d) => d.pageContent),
+      docs.map((d) => d.metadata)
+    );
+    console.log(`✂️ Split into ${splitDocs.length} chunks`);
+    console.log("🧩 Example chunk:", splitDocs[0]?.pageContent?.slice(0, 100));
 
-    return NextResponse.json({ ok: true, count: data.length });
+    // Step 4: Initialize embeddings
+    console.log("⚙️ Initializing HuggingFace embeddings...");
+    const embeddings = new HuggingFaceInferenceEmbeddings({
+      apiKey: process.env.HUGGINGFACE_API_KEY,
+      model: "sentence-transformers/all-mpnet-base-v2",
+    });
+
+    // Step 5: Test embedding generation
+    console.log("🧠 Generating test embedding for first chunk...");
+    const testEmbedding = await embeddings.embedQuery(splitDocs[0].pageContent);
+    console.log("✅ Test embedding length:", testEmbedding?.length);
+
+    // Step 6: Store embeddings in Supabase
+    console.log("📦 Uploading embeddings to Supabase...");
+    const vectorStore = await SupabaseVectorStore.fromDocuments(splitDocs, embeddings, {
+      client: supabaseClient,
+      tableName: "pdf_embeddings",
+      queryName: "match_pdf_embeddings",
+    });
+
+    console.log("✅ Successfully stored embeddings in Supabase");
+
+    // Step 7: Confirm count in Supabase
+    const { count, error: countError } = await supabaseClient
+      .from("pdf_embeddings")
+      .select("id", { count: "exact", head: true });
+
+    if (countError) console.error("⚠️ Count check error:", countError);
+    else console.log("📊 Total rows in Supabase:", count);
+
+    // Step 8: Finish
+    return NextResponse.json({
+      success: true,
+      message: "PDF embedded and stored successfully",
+      chunks: splitDocs.length,
+      totalRows: count ?? "unknown",
+    });
   } catch (err) {
-    console.error('store-vectors error', err);
-    return NextResponse.json({ error: err.message ?? String(err) }, { status: 500 });
+    console.error("❌ Embedding error:", err);
+    return NextResponse.json(
+      { error: err.message || "Embedding failed" },
+      { status: 500 }
+    );
   }
 }

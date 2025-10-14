@@ -7,34 +7,81 @@ export default function FileUploader() {
   const [loading, setLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // 🧠 Extract text from PDF
+  const extractTextFromPDF = async (pdfFile) => {
+    const pdfjsLib = await import("pdfjs-dist/build/pdf");
+    const pdfjsWorker = await import("pdfjs-dist/build/pdf.worker.entry");
+    pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+
+    const arrayBuffer = await pdfFile.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    const docs = [];
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      const strings = content.items.map((item) => item.str);
+      const pageText = strings.join(" ");
+      docs.push({
+        pageContent: pageText,
+        metadata: { pageNumber: i, fileName: pdfFile.name },
+      });
+    }
+
+    console.log("📘 Extracted pages:", docs.length);
+    return docs;
+  };
+
   const handleFileChange = async (selectedFile) => {
     if (!selectedFile) return;
     setFile(selectedFile);
     setLoading(true);
 
-    const res = await fetch("/api/embed", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileName: selectedFile.name }),
-    });
+    try {
+      console.log("📂 Reading PDF:", selectedFile.name);
 
-    setLoading(false);
+      // 🧠 Extract text and metadata
+      const docs = await extractTextFromPDF(selectedFile);
+
+      if (!docs.length) {
+        alert("Failed to extract text from PDF.");
+        setLoading(false);
+        return;
+      }
+
+      console.log("🚀 Sending docs to /api/embed...");
+      const res = await fetch("/api/embed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ docs }),
+      });
+
+      const data = await res.json();
+      console.log("✅ Embed response:", data);
+
+      if (!res.ok) {
+        alert("Embedding failed: " + data.error);
+      } else {
+        alert("PDF embedded successfully! ✅");
+      }
+    } catch (err) {
+      console.error("❌ Upload error:", err);
+      alert("Something went wrong: " + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleInputChange = (e) => {
-    handleFileChange(e.target.files[0]);
-  };
-
+  const handleInputChange = (e) => handleFileChange(e.target.files[0]);
   const handleDragOver = (e) => {
     e.preventDefault();
     setIsDragOver(true);
   };
-
   const handleDragLeave = (e) => {
     e.preventDefault();
     setIsDragOver(false);
   };
-
   const handleDrop = (e) => {
     e.preventDefault();
     setIsDragOver(false);
@@ -46,49 +93,44 @@ export default function FileUploader() {
 
   return (
     <div className="w-full max-w-md mx-auto">
-      {/* REMOVED THE HEADER FROM HERE - it should be in the main layout */}
-      
       <div
-        className={`
-          border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200
-          ${isDragOver 
-            ? "border-blue-500 bg-blue-50" 
+        className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
+          isDragOver
+            ? "border-blue-500 bg-blue-50"
             : "border-gray-300 hover:border-gray-400"
-          }
-          ${file ? "bg-gray-50" : "bg-white"}
-        `}
+        } ${file ? "bg-gray-50" : "bg-white"}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <input 
-          id="file-upload" 
-          type="file" 
-          accept="application/pdf" 
-          className="hidden" 
-          onChange={handleInputChange} 
+        <input
+          id="file-upload"
+          type="file"
+          accept="application/pdf"
+          className="hidden"
+          onChange={handleInputChange}
         />
-        
+
         <div className="flex flex-col items-center justify-center space-y-3">
           <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
-            <svg 
-              className="w-6 h-6 text-gray-600" 
-              fill="none" 
-              stroke="currentColor" 
+            <svg
+              className="w-6 h-6 text-gray-600"
+              fill="none"
+              stroke="currentColor"
               viewBox="0 0 24 24"
             >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" 
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
               />
             </svg>
           </div>
-          
+
           <div className="text-center">
-            <label 
-              htmlFor="file-upload" 
+            <label
+              htmlFor="file-upload"
               className="cursor-pointer font-medium text-gray-900 hover:text-gray-700 transition-colors"
             >
               Choose a file
@@ -97,10 +139,8 @@ export default function FileUploader() {
               or drag and drop your PDF here
             </p>
           </div>
-          
-          <p className="text-xs text-gray-400">
-            PDF files only
-          </p>
+
+          <p className="text-xs text-gray-400">PDF files only</p>
         </div>
 
         {file && (
@@ -117,8 +157,18 @@ export default function FileUploader() {
               onClick={() => setFile(null)}
               className="text-gray-400 hover:text-gray-600 transition-colors"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
