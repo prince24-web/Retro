@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { Github, Twitter } from "lucide-react";
 
 export default function FileUploader() {
   const [file, setFile] = useState(null);
@@ -45,6 +46,8 @@ export default function FileUploader() {
 
   return (
     <div className="w-full max-w-md mx-auto">
+      {/* REMOVED THE HEADER FROM HERE - it should be in the main layout */}
+      
       <div
         className={`
           border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200
